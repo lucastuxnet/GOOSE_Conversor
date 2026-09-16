@@ -41,15 +41,14 @@ struct headers_t {
 }
 
 struct metadata_t {
-    bit<3> band_SqNum;
-    bit<3> band_StNum;
+    bit<1> band_SqNum;
+    bit<2> band_StNum;
     bit<2> band_cbStatus;
-    bit<1> band_delay;
-    bit<2> band_sqDiff;
-    bit<3> band_stDiff;
-    bit<3> band_tDiff;
-    bit<2> band_timeFromLastChange;
-    bit<3> band_timestampDiff;
+    bit<1> band_sqDiff;
+    bit<2> band_stDiff;
+    bit<2> band_tDiff;
+    bit<1> band_timeFromLastChange;
+    bit<1> band_timestampDiff;
     bit<16> attack_id;
     bit<1>  is_attack;
 }
@@ -61,7 +60,7 @@ parser IngressParser(packet_in pkt,
     state start {
         pkt.extract(ig_intr_md);
         pkt.advance(PORT_METADATA_SIZE);
-        md = (metadata_t){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        md = (metadata_t){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         transition parse_ethernet;
     }
 
@@ -96,7 +95,7 @@ control Ingress(inout headers_t hdr,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
-    action set_band_SqNum(bit<3> idx) {
+    action set_band_SqNum(bit<1> idx) {
         md.band_SqNum = idx;
     }
 
@@ -108,10 +107,10 @@ control Ingress(inout headers_t hdr,
         key = { hdr.goose.SqNum : range; }
         actions = { set_band_SqNum; band_SqNum_default; }
         default_action = band_SqNum_default();
-        size = 16;
+        size = 8;
     }
 
-    action set_band_StNum(bit<3> idx) {
+    action set_band_StNum(bit<2> idx) {
         md.band_StNum = idx;
     }
 
@@ -123,7 +122,7 @@ control Ingress(inout headers_t hdr,
         key = { hdr.goose.StNum : range; }
         actions = { set_band_StNum; band_StNum_default; }
         default_action = band_StNum_default();
-        size = 14;
+        size = 8;
     }
 
     action set_band_cbStatus(bit<2> idx) {
@@ -141,22 +140,7 @@ control Ingress(inout headers_t hdr,
         size = 8;
     }
 
-    action set_band_delay(bit<1> idx) {
-        md.band_delay = idx;
-    }
-
-    action band_delay_default() {
-        md.band_delay = 0;
-    }
-
-    table tbl_band_delay {
-        key = { hdr.goose.delay : range; }
-        actions = { set_band_delay; band_delay_default; }
-        default_action = band_delay_default();
-        size = 8;
-    }
-
-    action set_band_sqDiff(bit<2> idx) {
+    action set_band_sqDiff(bit<1> idx) {
         md.band_sqDiff = idx;
     }
 
@@ -171,7 +155,7 @@ control Ingress(inout headers_t hdr,
         size = 8;
     }
 
-    action set_band_stDiff(bit<3> idx) {
+    action set_band_stDiff(bit<2> idx) {
         md.band_stDiff = idx;
     }
 
@@ -183,10 +167,10 @@ control Ingress(inout headers_t hdr,
         key = { hdr.goose.stDiff : range; }
         actions = { set_band_stDiff; band_stDiff_default; }
         default_action = band_stDiff_default();
-        size = 10;
+        size = 8;
     }
 
-    action set_band_tDiff(bit<3> idx) {
+    action set_band_tDiff(bit<2> idx) {
         md.band_tDiff = idx;
     }
 
@@ -198,10 +182,10 @@ control Ingress(inout headers_t hdr,
         key = { hdr.goose.tDiff : range; }
         actions = { set_band_tDiff; band_tDiff_default; }
         default_action = band_tDiff_default();
-        size = 12;
+        size = 8;
     }
 
-    action set_band_timeFromLastChange(bit<2> idx) {
+    action set_band_timeFromLastChange(bit<1> idx) {
         md.band_timeFromLastChange = idx;
     }
 
@@ -216,7 +200,7 @@ control Ingress(inout headers_t hdr,
         size = 8;
     }
 
-    action set_band_timestampDiff(bit<3> idx) {
+    action set_band_timestampDiff(bit<1> idx) {
         md.band_timestampDiff = idx;
     }
 
@@ -228,48 +212,23 @@ control Ingress(inout headers_t hdr,
         key = { hdr.goose.timestampDiff : range; }
         actions = { set_band_timestampDiff; band_timestampDiff_default; }
         default_action = band_timestampDiff_default();
-        size = 12;
+        size = 8;
     }
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) detect_ctr;
 
-    action flag_grayhole() {
+    action flag_high_StNum() {
         md.attack_id = 1;
         md.is_attack = 1;
         detect_ctr.count();
     }
-    action flag_high_StNum() {
+    action flag_injection() {
         md.attack_id = 2;
         md.is_attack = 1;
         detect_ctr.count();
     }
-    action flag_injection() {
-        md.attack_id = 3;
-        md.is_attack = 1;
-        detect_ctr.count();
-    }
-    action flag_inverse_replay() {
-        md.attack_id = 4;
-        md.is_attack = 1;
-        detect_ctr.count();
-    }
     action flag_masquerade_fake_fault() {
-        md.attack_id = 5;
-        md.is_attack = 1;
-        detect_ctr.count();
-    }
-    action flag_masquerade_fake_normal() {
-        md.attack_id = 6;
-        md.is_attack = 1;
-        detect_ctr.count();
-    }
-    action flag_poisoned_high_rate() {
-        md.attack_id = 7;
-        md.is_attack = 1;
-        detect_ctr.count();
-    }
-    action flag_random_replay() {
-        md.attack_id = 8;
+        md.attack_id = 3;
         md.is_attack = 1;
         detect_ctr.count();
     }
@@ -284,14 +243,13 @@ control Ingress(inout headers_t hdr,
             md.band_SqNum : ternary;
             md.band_StNum : ternary;
             md.band_cbStatus : ternary;
-            md.band_delay : ternary;
             md.band_sqDiff : ternary;
             md.band_stDiff : ternary;
             md.band_tDiff : ternary;
             md.band_timeFromLastChange : ternary;
             md.band_timestampDiff : ternary;
         }
-        actions = { flag_grayhole; flag_high_StNum; flag_injection; flag_inverse_replay; flag_masquerade_fake_fault; flag_masquerade_fake_normal; flag_poisoned_high_rate; flag_random_replay; no_attack; }
+        actions = { flag_high_StNum; flag_injection; flag_masquerade_fake_fault; no_attack; }
         default_action = no_attack();
         counters = detect_ctr;
         size = 2048;
@@ -317,7 +275,6 @@ control Ingress(inout headers_t hdr,
             tbl_band_SqNum.apply();
             tbl_band_StNum.apply();
             tbl_band_cbStatus.apply();
-            tbl_band_delay.apply();
             tbl_band_sqDiff.apply();
             tbl_band_stDiff.apply();
             tbl_band_tDiff.apply();
