@@ -1,0 +1,22 @@
+regras lidas ......... 8
+campos ativos ........ 8
+entradas ternárias ... 15
+classes de ataque .... 3
+
+build/goose_ids.p4
+build/setup_rules.py
+
+--- faixas por campo ---
+SqNum                    2 faixas, 1 bits
+StNum                    4 faixas, 2 bits
+cbStatus                 3 faixas, 2 bits
+sqDiff                   2 faixas, 1 bits
+stDiff                   3 faixas, 2 bits
+tDiff                    4 faixas, 2 bits
+timeFromLastChange       2 faixas, 1 bits
+timestampDiff            2 faixas, 1 bits
+
+--- ataques ---
+   1  high_StNum
+   2  injection
+   3  masquerade_fake_fault

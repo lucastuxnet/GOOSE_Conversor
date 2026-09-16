@@ -1,0 +1,11 @@
+/home/lucas/open-p4studio/pkgsrc/p4-examples/p4_16_programs/goose_ids/goose_ids.p4(301): [--Wwarn=uninitialized-out-param] warning: out parameter 'md' may be uninitialized when 'EgressParser' terminates
+                    out metadata_t md,
+                                   ^^
+/home/lucas/open-p4studio/pkgsrc/p4-examples/p4_16_programs/goose_ids/goose_ids.p4(299)
+parser EgressParser(packet_in pkt,
+       ^^^^^^^^^^^^
+warning: Parser state min_parse_depth_accept_loop will be unrolled up to 4 times due to @pragma max_loop_depth.
+warning: Parser state min_parse_depth_accept_loop will be unrolled up to 4 times due to @pragma max_loop_depth.
+
+0 errors, 3 warnings generated.
+

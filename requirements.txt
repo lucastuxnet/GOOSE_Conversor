@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------
+# goose_ids_pipeline.ipynb — dependências Python
+#
+#   python3 -m venv ~/.venv/goose && source ~/.venv/goose/bin/activate
+#   pip install -r requirements.txt
+#   python -m ipykernel install --user --name goose --display-name "Python (goose)"
+#
+# Pacotes de sistema (NÃO instaláveis por pip) — ver notas no fim do arquivo.
+# Testado com Python 3.10 (Ubuntu 22.04, open-p4studio).
+# ---------------------------------------------------------------------
+
+# --- Jupyter (interface + kernel) ------------------------------------
+jupyterlab>=4.0,<5          # execução do notebook; use `notebook>=7` se preferir o Notebook clássico
+ipykernel>=6.25             # kernel Python
+ipython>=8.10               # display(), saídas ricas
+
+# --- Widgets da Seção 0 (nome da sessão + escolha do rules_*.py) -----
+# Sem ipywidgets o notebook cai automaticamente no modo input() numerado.
+ipywidgets>=8.0,<9          # com JupyterLab 4 / Notebook 7 não precisa de labextension separada
+
+# --- Sessão bfshell/bfrt_python persistente (Seção 6) ----------------
+pexpect>=4.8                # pty real, equivalente ao `script -c` do fluxo manual
+
+# --- Tabelas e CSVs (Seções 2, 3, 6, 7) ------------------------------
+pandas>=2.0
+tabulate>=0.9               # OBRIGATÓRIO: DataFrame.to_markdown() no relatório da Seção 8
+
+# --- Relatório (Seção 8) ---------------------------------------------
+markdown>=3.4               # opcional: gera relatorio.html além do relatorio.md
+                            # sem ele o notebook apenas avisa e segue com o .md
+
+# --- Opcionais: exportar o notebook executado ------------------------
+# nbconvert>=7.0            # jupyter nbconvert --to html goose_ids_pipeline.ipynb
+# nbformat>=5.9             # manipular o .ipynb por script
+
+# ---------------------------------------------------------------------
+# Dependências de SISTEMA (apt) — o notebook falha ou avisa sem elas:
+#
+#   sudo apt install -y tcpreplay tcpdump
+#
+#   tcpreplay .... injeção do PCAP na veth (Seção 7)
+#   tcpdump ...... diagnóstico do EtherType 0x88B8 quando os deltas dão zero
+#
+# Já fornecidos pelo open-p4studio (via ~/setup-open-p4studio.bash):
+#   p4c, run_tofino_model.sh, run_switchd.sh, run_bfshell.sh, veth_setup.sh
+#
+# O conversor (rules2p4.py, validate.py, gen_test_traffic.py) roda como
+# subprocesso `python3` — se ele tiver dependências próprias (ex.: scapy
+# em gen_test_traffic.py), instale-as no MESMO interpretador que o
+# notebook usa, ou garanta que o `python3` do PATH as tenha.
+# ---------------------------------------------------------------------

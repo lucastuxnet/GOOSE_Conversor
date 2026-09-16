@@ -61,35 +61,21 @@ def main():
             # semanticamente relevante: em campos naturalmente não-negativos,
             # zero é o piso real e `x < 5` funciona como esperado.
             if spec.offset:
-                # Saturação só invalida o predicado quando a faixa que o
-                # satisfaz deixa de existir no domínio [0, hi]:
-                #   x >  v : corte em raw+1 -> precisa raw <  hi
-                #   x >= v : corte em raw   -> precisa raw <= hi
-                #   x <  v : corte em raw   -> precisa raw >  0
-                #   x <= v : corte em raw+1 -> precisa raw >= 0
-                #   ==/!=  : raw precisa ser distinguível dos dois vizinhos
-                ok = {
-                    ">":  raw < hi,
-                    ">=": raw <= hi,
-                    "<":  raw > 0,
-                    "<=": raw >= 0,
-                    "==": 0 < raw < hi,
-                    "!=": 0 < raw < hi,
-                }[p.op]
-                if not ok:
+                margem = 0.02 * hi
+                if p.op in ("<", "<=") and raw < margem:
                     sys.exit(
                         f"limiar {p.value} do campo {p.field} (regra {r.name}) "
-                        f"codifica em {raw}, e com '{p.op}' a faixa que satisfaz "
-                        f"o predicado cai fora do domínio [0, {hi}].\n"
-                        f"Ajuste 'bias' em field_model.py."
+                        f"fica no extremo inferior do domínio (codificado {raw}).\n"
+                        f"Valores abaixo dele saturam e deixam de satisfazer "
+                        f"'{p.op}'.\nAumente 'bias' em field_model.py."
                     )
-                elif raw >= hi - 1 or raw <= 1:
-                    print(
-                        f"[aviso] limiar {p.value} de {p.field} ({r.name}) "
-                        f"codifica em {raw}, no limite do domínio; valores além "
-                        f"dele saturam (correto para '{p.op}').",
-                        file=sys.stderr,
+                if p.op in (">", ">=") and raw > hi - margem:
+                    sys.exit(
+                        f"limiar {p.value} do campo {p.field} (regra {r.name}) "
+                        f"fica no extremo superior do domínio (codificado {raw}).\n"
+                        "Reduza 'bias' ou 'scale' em field_model.py."
                     )
+
     enc = RangeEncoder(rules)
     os.makedirs(args.outdir, exist_ok=True)
 

@@ -48,9 +48,9 @@ FIELDS: Dict[str, FieldSpec] = {
     "StNum":              FieldSpec("StNum", 16),
     "cbStatus":           FieldSpec("cbStatus", 8),
     "sqDiff":             FieldSpec("sqDiff", 16, signed=True),
-    "stDiff":             FieldSpec("stDiff", 16, bias=62000),
+    "stDiff":             FieldSpec("stDiff", 16, bias=65001),
     "tDiff":              FieldSpec("tDiff", 16, signed=True),
-    "timeFromLastChange": FieldSpec("timeFromLastChange", 16),
+    "timeFromLastChange": FieldSpec("timeFromLastChange", 16, bias=11),
     "timestampDiff":      FieldSpec("timestampDiff", 16, scale=10_000, signed=True),
     "delay":              FieldSpec("delay", 16, scale=1_000_000),
 }

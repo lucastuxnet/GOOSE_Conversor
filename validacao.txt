@@ -1,0 +1,7 @@
+pacotes testados ......... 100000
+detecções coincidentes ... 38460
+divergência detecção ..... 4
+divergência classe ....... 0
+
+regras com divergência:
+      4  rule_masquerade_fake_fault_excessive_tdiff_timestamp_drift

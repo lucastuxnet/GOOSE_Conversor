@@ -1,0 +1,6 @@
+total 180
+drwxrwxr-x  3 lucas lucas   4096 set 16 12:16 .
+drwxrwxr-x 67 lucas lucas   4096 jul 23 16:13 ..
+-rw-rw-r--  1 lucas lucas 167089 set 16 12:16 bf-rt.json
+-rw-rw-r--  1 lucas lucas   1677 set 16 12:16 manifest.json
+drwxr-xr-x  4 lucas lucas   4096 set 16 12:16 pipe
