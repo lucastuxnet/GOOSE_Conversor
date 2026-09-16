@@ -23,24 +23,30 @@ cresce em entradas de TCAM, não em recursos de pipeline.
 
 ## Versões
 
-### 0.1
+### Releases do simulador (GOOSE_Simulator)
 
-Versão inicial do conversor. Campos codificados em 32 bits, campos com sinal
-usando offset binário (`+2^31`) e escalas fixas para `timestampDiff` (10⁴) e
-`delay` (10⁶). Discretização em faixas, tabela ternária `detect`,
-`DirectCounter`, gerador de tráfego e validador.
+| Release | Data | Resumo |
+|---|---|---|
+| **v1** | 14/jun/2026 | Primeiro pipeline fim a fim: converter → validar → compilar → popular → injetar → ler contadores no `tofino-model`. |
+| **v2** | 16/jul/2026 | Passe de correção nos defeitos que distorciam o resultado final (ver 0.1.1 abaixo). Reproduz as métricas reportadas. |
 
-### 0.2
+### Histórico do conversor `rules2p4`
 
-Alterações em `field_model.py` e `rules2p4.py` para que todas as regras dos
-conjuntos `rules_v1` a `rules_v6` sejam convertidas e tenham suas detecções
-capturadas nos contadores.
+| Versão | Antiga nomenclatura | Consumida por | Mudança principal |
+|---|---|---|---|
+| **0.1** | rev. 1 | `rules_v1.py` | Tradução inicial AST Python → P4_16/TNA com tabela ternária `detect` e tabelas de faixa por campo. Campos em 32 bits, offset binário `+2^31` para campos com sinal, escalas 10⁴ (`timestampDiff`) e 10⁶ (`delay`). |
+| **0.1.1** | rev. 2 | `rules_v2.py` | Ações nomeadas por classe (`flag_grayhole`, `flag_injection`, …) em vez de `flag_attack` genérico; paridade dos ramos VLAN/untagged do parser; prioridade única por entrada TCAM; ajustes de escala apontados pelo `validate.py`; ordem obrigatória populate → inject → read. |
+| **0.1.2** | rev. 3 | `rules_v3.py` | Faixas rederivadas para o conjunto regenerado pela LLM; larguras reduzidas de 32 para 16 bits — o match `range` do Tofino exige chaves de até 4 nibbles e o p4c rejeita 32 bits (`does not fit in under 5 PHV nibbles`). |
+| **0.2** | — | `rules_v1` a `rules_v6` | Codificação com `bias` explícito e nova checagem de limiares (detalhes abaixo). Primeira versão a converter `rules_v2` e `rules_v3` sem alterar as regras. |
+
+### Alterações da 0.2 (set/2026)
+
+Objetivo: converter todos os conjuntos `rules_v1` a `rules_v6` e capturar as
+detecções de cada regra nos contadores, sem reescrever limiares gerados pela
+LLM.
 
 `field_model.py`:
 
-- Larguras reduzidas de 32 para 16 bits. O match `range` do Tofino exige
-  chaves de até 4 nibbles; chaves de 32 bits são rejeitadas pelo p4c
-  (`does not fit in under 5 PHV nibbles`).
 - Novo parâmetro `bias` em `FieldSpec`: offset explícito que substitui o
   offset binário simétrico (`2^(w-1)`) quando a faixa de limiares de um campo
   é assimétrica. Usado em:
@@ -56,15 +62,23 @@ capturadas nos contadores.
 
 - A verificação de limiares deixou de usar margem arbitrária (2% do domínio)
   e passou a testar se a saturação invalida o predicado: para cada operador,
-  o corte gerado precisa cair dentro de `[0, 2^w - 1]`. Com isso, limiares
-  que ficam encostados no teto ou no piso do domínio (como `stDiff > 500`
-  com bias 65001) são aceitos, e apenas cortes que sairiam do domínio
-  abortam a conversão.
+  o corte gerado precisa cair dentro de `[0, 2^w - 1]`. Limiares encostados no
+  teto ou no piso do domínio (como `stDiff > 500` com bias 65001) são aceitos;
+  apenas cortes que sairiam do domínio abortam a conversão.
 - Aviso informativo em `stderr` quando um limiar codifica a uma posição do
   extremo do domínio, para registro no log do experimento.
 
-Conjuntos de regras já testados no modelo Tofino: `rules_v1`, `rules_v4`,
-`rules_v5`, `rules_v6` (0.1) e, após esta versão, `rules_v2` e `rules_v3`.
+### Conjuntos de regras
+
+| Arquivo | Descrição | Testado no `tofino-model` |
+|---|---|---|
+| `rules_v1.py` | Primeiro conjunto gerado pela LLM (baseline). | 0.1 |
+| `rules_v2.py` | Conjunto alinhado às correções da 0.1.1. Limiar `stDiff < -65000` não representável antes da 0.2. | pendente (0.2) |
+| `rules_v3.py` | Conjunto regenerado. Limiar `timeFromLastChange > -10` não representável antes da 0.2. | pendente (0.2) |
+| `rules_v4.py` – `rules_v6.py` | Conjuntos posteriores. | 0.1.x |
+
+Todos os conjuntos serão reexecutados com o conversor 0.2 para que o lote de
+resultados use uma única versão do conversor.
 
 ## Uso
 
