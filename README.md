@@ -21,6 +21,51 @@ A solução adotada é **discretização em faixas + match ternário**:
 O resultado é O(1) em estágios independentemente do número de regras; o custo
 cresce em entradas de TCAM, não em recursos de pipeline.
 
+## Versões
+
+### 0.1
+
+Versão inicial do conversor. Campos codificados em 32 bits, campos com sinal
+usando offset binário (`+2^31`) e escalas fixas para `timestampDiff` (10⁴) e
+`delay` (10⁶). Discretização em faixas, tabela ternária `detect`,
+`DirectCounter`, gerador de tráfego e validador.
+
+### 0.2
+
+Alterações em `field_model.py` e `rules2p4.py` para que todas as regras dos
+conjuntos `rules_v1` a `rules_v6` sejam convertidas e tenham suas detecções
+capturadas nos contadores.
+
+`field_model.py`:
+
+- Larguras reduzidas de 32 para 16 bits. O match `range` do Tofino exige
+  chaves de até 4 nibbles; chaves de 32 bits são rejeitadas pelo p4c
+  (`does not fit in under 5 PHV nibbles`).
+- Novo parâmetro `bias` em `FieldSpec`: offset explícito que substitui o
+  offset binário simétrico (`2^(w-1)`) quando a faixa de limiares de um campo
+  é assimétrica. Usado em:
+  - `stDiff` (`bias=65001`): o limiar `-65000` de `rules_v2` exige 65001
+    valores negativos, acima dos 32768 do offset simétrico. Escala fracionária
+    não serve, porque colapsaria valores adjacentes e destruiria a fronteira
+    do predicado.
+  - `timeFromLastChange` (`bias=11`): o limiar `-10` de `rules_v3` exige
+    valores negativos em um campo antes tratado como sem sinal.
+- `scale` passa a aceitar float.
+
+`rules2p4.py`:
+
+- A verificação de limiares deixou de usar margem arbitrária (2% do domínio)
+  e passou a testar se a saturação invalida o predicado: para cada operador,
+  o corte gerado precisa cair dentro de `[0, 2^w - 1]`. Com isso, limiares
+  que ficam encostados no teto ou no piso do domínio (como `stDiff > 500`
+  com bias 65001) são aceitos, e apenas cortes que sairiam do domínio
+  abortam a conversão.
+- Aviso informativo em `stderr` quando um limiar codifica a uma posição do
+  extremo do domínio, para registro no log do experimento.
+
+Conjuntos de regras já testados no modelo Tofino: `rules_v1`, `rules_v4`,
+`rules_v5`, `rules_v6` (0.1) e, após esta versão, `rules_v2` e `rules_v3`.
+
 ## Uso
 
 ```bash
@@ -86,19 +131,25 @@ união naturalmente.
 
 ## Campos e escalas
 
-Campos float são convertidos a inteiro por escala fixa antes da comparação:
+Campos float são convertidos a inteiro por escala fixa antes da comparação.
+Todas as larguras são limitadas a 16 bits pelo match `range` do Tofino.
 
-| Campo | Largura | Escala | Sinal |
+| Campo | Largura | Escala | Offset |
 |---|---|---|---|
-| SqNum, StNum, timeFromLastChange | 32 | 1 | não |
-| cbStatus | 8 | 1 | não |
-| sqDiff, stDiff, tDiff | 32 | 1 | sim |
-| timestampDiff | 32 | 10000 | sim |
-| delay | 32 | 1000000 | não |
+| SqNum, StNum | 16 | 1 | 0 |
+| cbStatus | 8 | 1 | 0 |
+| sqDiff, tDiff | 16 | 1 | 2^15 (sinal) |
+| stDiff | 16 | 1 | 65001 (bias explícito) |
+| timeFromLastChange | 16 | 1 | 11 (bias explícito) |
+| timestampDiff | 16 | 10000 | 2^15 (sinal) |
+| delay | 16 | 1000000 | 0 |
 
-Campos com sinal usam offset binário (`+2^31`), porque o match `range` do
-Tofino é unsigned. O plano de controle aplica o mesmo offset ao inserir as
-faixas, então a ordenação é preservada.
+O match `range` do Tofino é unsigned, então campos que assumem valores
+negativos recebem um offset — binário simétrico (`signed=True`) ou explícito
+(`bias=N`) quando a faixa de limiares é assimétrica. O plano de controle aplica
+o mesmo offset ao inserir as faixas, então a ordenação é preservada. Valores
+fora do domínio codificado saturam nos extremos; o conversor aborta apenas
+quando a saturação faria a faixa de um predicado deixar de existir.
 
 A escala do `timestampDiff` é 10⁴ porque as regras usam limiares com quatro
 casas decimais (`0.1721`). Escala menor colapsa valores distintos na mesma
