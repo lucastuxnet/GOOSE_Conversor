@@ -7,7 +7,7 @@ de execução fim a fim no `tofino-model` (P4Studio).
 ¹ Universidade Federal de Uberlândia (UFU) – Uberlândia, Brazil
 ² Universidade Federal do Pampa (UNIPAMPA) – Alegrete, Brazil
 
-`{lucas.martins, camillaquincozes, sequincozes, gsiervo}@ufu.br`
+`{lucas.martins, ersilva, sequincozes, camillaquincozes, gsiervo}@ufu.br`
 `{marceloluizelli}@unipampa.edu.br`
 
 ---
